@@ -1,10 +1,10 @@
+import configparser
 import socket
 import struct
-import msgpack
-import cv2
-import numpy as np
 
-import configparser
+import cv2
+import msgpack
+import numpy as np
 
 config = configparser.ConfigParser()
 config.read("config.ini")

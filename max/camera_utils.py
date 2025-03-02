@@ -1,9 +1,11 @@
-from picamera2.devices import IMX500
 import configparser
-from picamera2 import Picamera2
-from picamera2.devices.imx500 import NetworkIntrinsics, postprocess_nanodet_detection
-import numpy as np
+
 import cv2
+import numpy as np
+from picamera2 import Picamera2
+from picamera2.devices import IMX500
+from picamera2.devices.imx500 import (NetworkIntrinsics,
+                                      postprocess_nanodet_detection)
 
 config = configparser.ConfigParser()
 config.read("config.ini")

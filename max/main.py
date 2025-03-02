@@ -1,17 +1,8 @@
-import argparse
-import sys
-
-import socket
-import threading
 import configparser
-import struct
-import msgpack
 
 import cv2
-
-
-from camera_utils import init_camera, get_num_people_local
-from network_utils import init_connection, send_frame, receive_frame
+from camera_utils import get_num_people_local, init_camera
+from network_utils import init_connection, receive_frame, send_frame
 
 config = configparser.ConfigParser()
 config.read("config.ini")
