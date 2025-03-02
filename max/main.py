@@ -17,10 +17,10 @@ config = configparser.ConfigParser()
 config.read("config.ini")
 
 # Global variables
-REMOTE_IP = config['REMOTE']['ip']
-REMOTE_PORT = int(config['REMOTE']['port'])
+REMOTE_IP = config["REMOTE"]["ip"]
+REMOTE_PORT = int(config["REMOTE"]["port"])
 
-DISPLAY_LOCAL = False 
+DISPLAY_LOCAL = False
 
 
 def main():
@@ -32,32 +32,21 @@ def main():
         local_frame = PICAM2.capture_array()
         # parse the number of people in frame
         metadata = PICAM2.capture_metadata()
-        num_persons = get_num_people_local(metadata, IMX500) # type: ignore
+        num_persons = get_num_people_local(metadata, IMX500)  # type: ignore
 
         # send the frame and the number of people to the remote
         send_frame(outgoing_socket, local_frame, num_persons)
         # receive the frame and the number of people from the remote
         remote_frame, num_people = receive_frame(incoming_connection)
 
-        if(DISPLAY_LOCAL):
+        if DISPLAY_LOCAL:
             frame = local_frame
         else:
             frame = remote_frame
 
-        cv2.imshow('f', frame) # type: ignore
+        cv2.imshow("f", frame)  # type: ignore
         cv2.waitKey(1)
-
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-    
-
-
-                                               
-    

@@ -25,14 +25,17 @@ def init_connection() -> tuple[socket.socket, socket.socket]:
     return outgoing_socket, incoming_connection
 
 
-
-def send_frame(outgoing_socket: socket.socket, frame: np.ndarray, number_of_persons: int) -> None:
+def send_frame(
+    outgoing_socket: socket.socket, frame: np.ndarray, number_of_persons: int
+) -> None:
     # Encode the frame as JPEG
-    _, frame_encoded = cv2.imencode('.jpg', frame)
+    _, frame_encoded = cv2.imencode(".jpg", frame)
     frame_data = frame_encoded.tobytes()
-    
-    payload = msgpack.packb({'frame': frame_data, 'number_of_persons': number_of_persons}, use_bin_type=True)
-    
+
+    payload = msgpack.packb(
+        {"frame": frame_data, "number_of_persons": number_of_persons}, use_bin_type=True
+    )
+
     # Send the size of the data and then the payload
     data_size = struct.pack("I", len(payload))
     outgoing_socket.sendall(data_size + payload)
@@ -69,5 +72,5 @@ def receive_frame(incoming_connection) -> tuple[np.ndarray, int]:
     except Exception as e:
         print("Error:", e)
         return None
-        
+
     return frame, number_of_persons

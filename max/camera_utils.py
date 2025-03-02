@@ -9,13 +9,13 @@ config = configparser.ConfigParser()
 config.read("config.ini")
 
 # camera settings
-model = config['CAMERA']['model']
-height = int(config['CAMERA']['height'])
-width = int(config['CAMERA']['width'])
-iou = float(config['CAMERA']['iou'])
-threshold = float(config['CAMERA']['threshold'])
-max_detections = int(config['CAMERA']['max_detections'])
-inference_rate = int(config['CAMERA']['inference_rate'])
+model = config["CAMERA"]["model"]
+height = int(config["CAMERA"]["height"])
+width = int(config["CAMERA"]["width"])
+iou = float(config["CAMERA"]["iou"])
+threshold = float(config["CAMERA"]["threshold"])
+max_detections = int(config["CAMERA"]["max_detections"])
+inference_rate = int(config["CAMERA"]["inference_rate"])
 
 
 def init_camera() -> tuple[Picamera2, IMX500]:
@@ -42,8 +42,11 @@ def init_camera() -> tuple[Picamera2, IMX500]:
     intrinsics.inference_rate = inference_rate
 
     picam2 = Picamera2(imx500.camera_num)
-    config = picam2.create_preview_configuration(controls={"FrameRate": intrinsics.inference_rate}, buffer_count=12,
-                                                 main={"format": 'XRGB8888', "size": (width, height)})
+    config = picam2.create_preview_configuration(
+        controls={"FrameRate": intrinsics.inference_rate},
+        buffer_count=12,
+        main={"format": "XRGB8888", "size": (width, height)},
+    )
 
     imx500.show_network_fw_progress_bar()
     picam2.start(config)
@@ -65,10 +68,13 @@ def get_num_people_local(metadata: dict, imx500: IMX500) -> int:
 
     if np_outputs is None:
         return 0
-    
-    _, scores, classes = \
-        postprocess_nanodet_detection(outputs=np_outputs[0], conf=threshold, iou_thres=iou,
-                                        max_out_dets=max_detections)[0]
+
+    _, scores, classes = postprocess_nanodet_detection(
+        outputs=np_outputs[0],
+        conf=threshold,
+        iou_thres=iou,
+        max_out_dets=max_detections,
+    )[0]
     ## parse how many people are in the frame
     num_persons = 0
     for score, category in zip(scores, classes):
@@ -76,4 +82,3 @@ def get_num_people_local(metadata: dict, imx500: IMX500) -> int:
             num_persons += 1
 
     return num_persons
-
