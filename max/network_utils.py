@@ -1,6 +1,8 @@
 import configparser
 import socket
 import struct
+import time
+import logging
 
 import cv2
 import msgpack
@@ -14,13 +16,32 @@ remote_port = int(config["REMOTE"]["port"])
 
 
 def init_connection() -> tuple[socket.socket, socket.socket]:
+    """
+    Establishes a bidirectional socket connection. Retries until successful if the remote device is offline.
+    """
     outgoing_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    outgoing_socket.connect((remote_ip, remote_port))
 
+    # Keep trying to connect until successful
+    while True:
+        try:
+            logging.info(f"Attempting to connect to {remote_ip}:{remote_port}...")
+            outgoing_socket.connect((remote_ip, remote_port))
+            logging.info("Outgoing connection established!")
+            break  # Exit loop when successful
+        except (socket.error, ConnectionRefusedError):
+            logging.warning(
+                f"Connection to {remote_ip}:{remote_port} failed. Retrying in 3 seconds..."
+            )
+            time.sleep(3)  # Wait before retrying
+
+    # Setup incoming connection
     incoming_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     incoming_socket.bind(("0.0.0.0", remote_port))
     incoming_socket.listen(1)
-    incoming_connection, _ = incoming_socket.accept()
+    logging.info(f"Waiting for an incoming connection on port {remote_port}...")
+
+    incoming_connection, addr = incoming_socket.accept()
+    logging.info(f"Incoming connection established from {addr}!")
 
     return outgoing_socket, incoming_connection
 
