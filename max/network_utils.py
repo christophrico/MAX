@@ -135,7 +135,7 @@ def send_frames(publisher, camera, imx500, state: ThreadSafeState):
 
             # Publish frame
             if publish_frame(publisher, packed_metadata, frame_data):
-                logging.info(f"Sent frame {frame_count}")
+                logging.debug(f"Sent frame {frame_count}")
                 frame_count += 1
 
             # Sleep to control frame rate
@@ -236,7 +236,7 @@ def update_view_state(state, current_time):
     """
     last_frame_time = state.get("last_remote_frame_time", 0)
 
-    if current_time - last_frame_time > 3:
+    if current_time - last_frame_time > 3 and state["display_local"] != True:
         state["display_local"] = True
         logging.info("Switched to local view due to timeout")
         return True
