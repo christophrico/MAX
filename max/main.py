@@ -39,6 +39,10 @@ led_queue = queue.Queue()
 
 def display_frames(camera, state):
     """Function for displaying frames"""
+    
+    cv2.namedWindow('image')
+    cv2.moveWindow('image', 200, 200)
+    
     while state["should_run"]:
         try:
             # Get the appropriate frame for display
@@ -48,9 +52,11 @@ def display_frames(camera, state):
                 logging.warning("No frame available for display")
                 time.sleep(0.1)
                 continue
+   
+            resized_frame = cv2.resize(frame, (191, 191))
 
             # Display the frame
-            cv2.imshow("Video Stream", frame)
+            cv2.imshow("image", resized_frame)
 
             # Exit on 'q' key
             key = cv2.waitKey(1)

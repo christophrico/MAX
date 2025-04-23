@@ -236,7 +236,7 @@ def update_view_state(state, current_time):
     """
     last_frame_time = state.get("last_remote_frame_time", 0)
 
-    if current_time - last_frame_time > 3 and state["display_local"] != True:
+    if current_time - last_frame_time > 3:
         state["display_local"] = True
         logging.info("Switched to local view due to timeout")
         return True
