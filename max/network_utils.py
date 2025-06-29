@@ -40,7 +40,7 @@ def init_subscriber(zmq_context, config) -> zmq.Socket:
 # ---------------------- Send Frame Functions ----------------------
 
 
-def encode_frame(frame, quality=70):
+def encode_frame(frame, quality=30):
     """
     Encode a frame for network transmission
 
@@ -237,9 +237,13 @@ def update_view_state(state, current_time):
     last_frame_time = state.get("last_remote_frame_time", 0)
 
     if current_time - last_frame_time > 3:
+        # only output if we are not already in local view
+        if(state["display_local"] == False):
+            logging.info("Switched to local view due to timeout")
+
         state["display_local"] = True
-        logging.info("Switched to local view due to timeout")
         return True
+    
     return False
 
 
@@ -262,17 +266,17 @@ def receive_frames(subscriber, state: ThreadSafeState):
             frame = decode_frame(frame_data)
             if frame is None:
                 continue
+        
 
             # Update state
             with state.lock:
+                if(state["display_local"] == True):
+                    logging.info("Switched to remote view")
+
                 state["remote_frame"] = frame
                 state["remote_num_people"] = remote_people_count
                 state["last_remote_frame_time"] = time.time()
                 state["display_local"] = False  # Switch to remote view
-
-            logging.info(
-                f"Updated state with remote frame, {remote_people_count} people"
-            )
 
         except Exception as e:
             logging.error(f"Error in receive_frames: {e}")

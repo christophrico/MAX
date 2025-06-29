@@ -12,6 +12,10 @@ opencv-python = "^4.10.0.84"
 loguru = "^0.7.2"
 numpy = "1.26.3"
 msgpack = "^1.1.0"
+adafruit-blinka-raspberry-pi5-neopixel = "^1.0.0rc2"
+adafruit-circuitpython-pixelbuf = "^2.0.9"
+adafruit-circuitpython-led-animation = "^2.12.2"
+sounddevice = "^0.5.2"
 
 
 [build-system]
