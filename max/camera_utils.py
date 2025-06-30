@@ -154,7 +154,7 @@ def capture_frame_with_metadata(camera, imx500):
         # Get metadata and detect people
         metadata = camera.capture_metadata()
         people_count = get_num_people_local(metadata, imx500)
-        logging.debug(f"Detected {people_count} people in frame")
+        logging.info(f"Detected {people_count} people in frame")
 
         return frame, people_count
     except Exception as e:

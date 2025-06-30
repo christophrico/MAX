@@ -142,7 +142,7 @@ class LEDStrand:
             elif animation_type == AnimationType.RAINBOW_CHASE:
                 return RainbowChase(self.pixels, speed=speed, size=5, spacing=3)
             elif animation_type == AnimationType.RAINBOW_COMET:
-                return RainbowComet(self.pixels, speed=speed, tail_length=12, bounce=True)
+                return RainbowComet(self.pixels, speed=speed, tail_length=7, bounce=True)
             elif animation_type == AnimationType.RAINBOW_SPARKLE:
                 return RainbowSparkle(self.pixels, speed=speed, num_sparkles=15)
             elif animation_type == AnimationType.SPARKLE_PULSE:
@@ -400,17 +400,17 @@ def is_active_time() -> bool:
 def get_speed_for_people_count(people_count: int) -> float:
     """Calculate animation speed based on number of people"""
     speed_map = {
-        0: 0.050,  # Very slow when no one is around
+        0: 0.10,  # Very slow when no one is around
         1: 0.025,  # Normal speed for one person
-        2: 0.015,  # Faster for two people
-        3: 0.010,  # Fast for three people
-        4: 0.005,  # Very fast for four or more people
+        2: 0.01,  # Faster for two people
+        3: 0.0025,  # Fast for three people
+        5: 0.005,  # Very fast for four or more people
     }
     
     if people_count >= max(speed_map.keys()):
         return speed_map[max(speed_map.keys())]
     
-    return speed_map.get(people_count, 0.025)
+    return speed_map.get(people_count)
 
 
 # High-level functional interface
@@ -556,8 +556,8 @@ def led_control_thread(led_queue: queue.Queue, state: ThreadSafeState):
     # and we'll check _shutdown_requested set by the main thread
     
     # Thread control variables
-    last_time_check = 0
-    last_people_count = -1
+    last_time_check = time.time()
+    last_people_count = time.time()
     check_interval = 60
     people_check_interval = 2
     last_people_check = 0
@@ -869,10 +869,10 @@ def led_control_process(led_queue, restart_queue):
                 should_animate = process_state["is_active"] and is_active_time()
                 
                 # Log state changes - make it INFO level so it's visible
-                if frame_counter == 0 or frame_counter % 1500 == 0:  # Every ~50 seconds at 30 FPS
-                    logging.info(f"*** LED STATE: active={process_state['is_active']}, "
-                               f"time_active={is_active_time()}, should_animate={should_animate} ***")
-                    sys.stdout.flush()
+                # if frame_counter == 0 or frame_counter % 1500 == 0:  # Every ~50 seconds at 30 FPS
+                #     logging.info(f"*** LED STATE: active={process_state['is_active']}, "
+                #                f"time_active={is_active_time()}, should_animate={should_animate} ***")
+                #     sys.stdout.flush()
                 
                 # Animation
                 if should_animate:
@@ -886,9 +886,9 @@ def led_control_process(led_queue, restart_queue):
                 frame_counter += 1
                 
                 # Heartbeat every 1500 frames (~50 seconds at 30 FPS) - much less frequent
-                if frame_counter % 1500 == 0:
-                    logging.info(f"*** LED HEARTBEAT: frame {frame_counter}, animating={should_animate} ***")
-                    sys.stdout.flush()
+                # if frame_counter % 1500 == 0:
+                #     logging.info(f"*** LED HEARTBEAT: frame {frame_counter}, animating={should_animate} ***")
+                #     sys.stdout.flush()
                 
             except KeyboardInterrupt:
                 logging.info("LED process received keyboard interrupt")
