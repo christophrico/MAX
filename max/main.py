@@ -194,9 +194,9 @@ def main():
     imx500 = None
     zmq_context = None
     publisher = None
-    subscriber = None
     led_process = None
-    
+    subscriber = None
+
     try:
         logging.info("Starting MAX application...")
         
@@ -220,7 +220,6 @@ def main():
         logging.info("Initializing ZeroMQ...")
         zmq_context = init_connection()
         publisher = init_publisher(zmq_context, config)
-        subscriber = init_subscriber(zmq_context, config)
 
         # Video streaming threads
         send_thread = threading.Thread(
@@ -230,9 +229,10 @@ def main():
             daemon=True,
         )
         
+        # Update the receive_thread creation:
         receive_thread = threading.Thread(
             target=receive_frames, 
-            args=(subscriber, app_state), 
+            args=(app_state, zmq_context, config),  # Pass zmq_context and config
             name="ReceiveFrames",
             daemon=True
         )

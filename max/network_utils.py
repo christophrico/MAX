@@ -30,11 +30,28 @@ def init_subscriber(zmq_context, config) -> zmq.Socket:
     remote_ip = config["REMOTE"]["ip"]
     remote_port = int(config["REMOTE"]["port"])
     subscriber = zmq_context.socket(zmq.SUB)
-    subscriber.connect(f"tcp://{remote_ip}:{remote_port}")
+    
+    # Set socket options BEFORE connecting
     subscriber.setsockopt_string(zmq.SUBSCRIBE, "")  # Subscribe to all messages
     subscriber.setsockopt(zmq.RCVTIMEO, 1000)  # 1000ms timeout
+    subscriber.setsockopt(zmq.RECONNECT_IVL, 100)  # Reconnect interval in ms
+    subscriber.setsockopt(zmq.RECONNECT_IVL_MAX, 1000)  # Max reconnect interval
+    
+    subscriber.connect(f"tcp://{remote_ip}:{remote_port}")
     logging.info(f"Subscriber connected to {remote_ip}:{remote_port}")
     return subscriber
+
+
+def recreate_subscriber(old_subscriber, zmq_context, config) -> zmq.Socket:
+    """Close old subscriber and create a new one"""
+    try:
+        if old_subscriber:
+            old_subscriber.close()
+            logging.debug("Closed old subscriber")
+    except Exception as e:
+        logging.warning(f"Error closing old subscriber: {e}")
+    
+    return init_subscriber(zmq_context, config)
 
 
 # ---------------------- Send Frame Functions ----------------------
@@ -52,8 +69,14 @@ def encode_frame(frame, quality=30):
         bytes: Encoded frame data or None if encoding failed
     """
     try:
+        # Fast encoding parameters
+        encode_params = [
+            cv2.IMWRITE_JPEG_QUALITY, quality,
+            cv2.IMWRITE_JPEG_OPTIMIZE, 0,  # Disable optimization for speed
+        ]
+
         _, encoded_frame = cv2.imencode(
-            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality]
+            ".jpg", frame, encode_params
         )
         frame_data = encoded_frame.tobytes()
         logging.debug(f"Encoded frame to {len(frame_data)} bytes")
@@ -107,7 +130,7 @@ def send_frames(publisher, camera, imx500, state: ThreadSafeState):
 
     while state["should_run"]:
         try:
-            # Get frame from camera (this should be in camera_utils)
+            # Get frame from camera
             local_frame = camera.capture_array()
             if local_frame is None:
                 logging.error(f"Failed to capture frame {frame_count}")
@@ -118,7 +141,7 @@ def send_frames(publisher, camera, imx500, state: ThreadSafeState):
                 f"Captured frame {frame_count} with shape: {local_frame.shape}"
             )
 
-            # Get people count (this should be in camera_utils)
+            # Get people count
             metadata = camera.capture_metadata()
             people_count = get_num_people_local(metadata, imx500)
 
@@ -223,7 +246,7 @@ def decode_frame(frame_data):
         return None
 
 
-def update_view_state(state, current_time):
+def update_view_state(state: ThreadSafeState, current_time):
     """
     Update the view state based on last received frame time
 
@@ -232,31 +255,51 @@ def update_view_state(state, current_time):
         current_time: Current time
 
     Returns:
-        bool: True if view was switched, False otherwise
+        bool: True if view was switched to local, False otherwise
     """
     last_frame_time = state.get("last_remote_frame_time", 0)
 
     if current_time - last_frame_time > 3:
-        # only output if we are not already in local view
-        if(state["display_local"] == False):
+        # Only log if we're actually switching
+        if not state.get("display_local", True):
             logging.info("Switched to local view due to timeout")
-
-        state["display_local"] = True
-        return True
-    
+            state["display_local"] = True
+            return True
     return False
 
 
-def receive_frames(subscriber, state: ThreadSafeState):
+def receive_frames(state: ThreadSafeState, zmq_context, config):
     """Function for receiving frames"""
+    consecutive_failures = 0
+    last_reconnect_time = 0
+    reconnect_interval = 5  # Reconnect every 5 seconds if failing
+    subscriber = init_subscriber(zmq_context, config)  # <-- Creates subscriber here
+
     while state["should_run"]:
         try:
             # Receive message
             packed_metadata, frame_data = receive_message(subscriber)
+            
             if packed_metadata is None:
-                # Check if we should switch to local view
-                update_view_state(state, time.time())
+                consecutive_failures += 1
+                current_time = time.time()
+                
+                # Update view state (switch to local if timeout)
+                update_view_state(state, current_time)
+                
+                # Recreate subscriber if we've had many consecutive failures
+                # and enough time has passed since last reconnect
+                if (consecutive_failures > 10 and 
+                    current_time - last_reconnect_time > reconnect_interval):
+                    logging.warning(f"Too many consecutive failures ({consecutive_failures}), recreating subscriber")
+                    subscriber = recreate_subscriber(subscriber, zmq_context, config)
+                    last_reconnect_time = current_time
+                    consecutive_failures = 0
+                
                 continue
+
+            # Reset failure counter on successful receive
+            consecutive_failures = 0
 
             # Unpack metadata
             metadata = unpack_metadata(packed_metadata)
@@ -266,13 +309,13 @@ def receive_frames(subscriber, state: ThreadSafeState):
             frame = decode_frame(frame_data)
             if frame is None:
                 continue
-        
 
-            # Update state
+            # Update state - only use lock when actually updating
             with state.lock:
-                if(state["display_local"] == True):
-                    logging.info("Switched to remote view")
-
+                # Log if switching from local to remote
+                if state.get("display_local", True):
+                    logging.info("Switched to remote view - connection restored")
+                
                 state["remote_frame"] = frame
                 state["remote_num_people"] = remote_people_count
                 state["last_remote_frame_time"] = time.time()
@@ -280,4 +323,12 @@ def receive_frames(subscriber, state: ThreadSafeState):
 
         except Exception as e:
             logging.error(f"Error in receive_frames: {e}")
+            consecutive_failures += 1
             time.sleep(0.5)  # Short delay before retry
+    
+    # Cleanup
+    try:
+        subscriber.close()
+        logging.info("Closed subscriber socket")
+    except Exception as e:
+        logging.warning(f"Error closing subscriber: {e}")

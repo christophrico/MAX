@@ -16,6 +16,7 @@ adafruit-blinka-raspberry-pi5-neopixel = "^1.0.0rc2"
 adafruit-circuitpython-pixelbuf = "^2.0.9"
 adafruit-circuitpython-led-animation = "^2.12.2"
 sounddevice = "^0.5.2"
+adafruit-circuitpython-mpr121 = "^2.1.24"
 
 
 [build-system]
