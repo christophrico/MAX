@@ -35,12 +35,6 @@ LED_STRANDS = {
         'animation_type': 'rainbow_comet',
         'responds_to_people': True
     },
-    'accent': {
-        'pin': board.D12,  # Different GPIO pin
-        'pixels': 24,
-        'animation_type': 'sparkle_pulse',
-        'responds_to_people': False
-    }
 }
 
 # Global flags for safe shutdown
@@ -142,7 +136,7 @@ class LEDStrand:
             elif animation_type == AnimationType.RAINBOW_CHASE:
                 return RainbowChase(self.pixels, speed=speed, size=5, spacing=3)
             elif animation_type == AnimationType.RAINBOW_COMET:
-                return RainbowComet(self.pixels, speed=speed, tail_length=7, bounce=True)
+                return RainbowComet(self.pixels, speed=speed, tail_length=7, bounce=False)
             elif animation_type == AnimationType.RAINBOW_SPARKLE:
                 return RainbowSparkle(self.pixels, speed=speed, num_sparkles=15)
             elif animation_type == AnimationType.SPARKLE_PULSE:
@@ -400,7 +394,7 @@ def is_active_time() -> bool:
 def get_speed_for_people_count(people_count: int) -> float:
     """Calculate animation speed based on number of people"""
     speed_map = {
-        0: 0.10,  # Very slow when no one is around
+        0: 0.05, #Very slow when no one is around
         1: 0.025,  # Normal speed for one person
         2: 0.01,  # Faster for two people
         3: 0.0025,  # Fast for three people
@@ -686,7 +680,7 @@ def led_control_thread(led_queue: queue.Queue, state: ThreadSafeState):
                 animate_leds()
                 time.sleep(0.02)  # 50 FPS
             else:
-                time.sleep(0.1)  # Responsive when inactive
+                time.sleep(0.2)  # Responsive when inactive
             
             frame_counter += 1
             
@@ -879,9 +873,9 @@ def led_control_process(led_queue, restart_queue):
                     animate_success = animate_leds()
                     if not animate_success and frame_counter % 500 == 0:  # Less frequent error logging
                         logging.warning("LED animation failing consistently")
-                    time.sleep(0.033)  # ~30 FPS (was 50 FPS) - reduced to prevent stuttering
+                    time.sleep(0.02)  # ~30 FPS (was 50 FPS) - reduced to prevent stuttering
                 else:
-                    time.sleep(0.1)  # Slower when inactive
+                    time.sleep(0.2)  # Slower when inactive
                 
                 frame_counter += 1
                 
